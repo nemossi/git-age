@@ -1,0 +1,131 @@
+name: Test git-age
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install age
+        run: |
+          source ../test/git-age-test.sh
+          install_age ubuntu
+          
+      - name: Set up test repo
+        run: |
+          source ../test/git-age-test.sh
+          setup_test_repo
+          
+      - name: Configure git-age (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age symmetric
+          
+      - name: Test encryption (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption
+          
+      - name: Test decryption (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_decryption
+          
+      - name: Configure git-age (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age asymmetric
+          
+      - name: Test encryption (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption
+          
+      - name: Test decryption (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_decryption
+  
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install age
+        run: |
+          choco install age
+          
+      - name: Set up test repo
+        run: |
+          source ../test/git-age-test.sh
+          setup_test_repo
+          
+      - name: Configure git-age (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age symmetric
+          
+      - name: Test encryption (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption_workflow windows symmetric
+          
+      - name: Configure git-age (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age asymmetric
+          
+      - name: Test encryption (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption_workflow windows asymmetric
+  
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install age (ARM)
+        run: |
+          brew install age
+          
+      - name: Set up test repo
+        run: |
+          source ../test/git-age-test.sh
+          setup_test_repo
+          
+      - name: Configure git-age (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age symmetric
+          
+      - name: Test encryption (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption
+          
+      - name: Test decryption (symmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_decryption
+          
+      - name: Configure git-age (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          configure_git_age asymmetric
+          
+      - name: Test encryption (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_encryption
+          
+      - name: Test decryption (asymmetric)
+        run: |
+          source ../test/git-age-test.sh
+          test_decryption
