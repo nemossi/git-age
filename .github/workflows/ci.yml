@@ -20,6 +20,7 @@ jobs:
       - name: Test encryption and decryption
         shell: bash
         run: |
+          echo "OSTYPE: $OSTYPE"
           echo "RUNNER_OS: $RUNNER_OS"
           echo "MSYSTEM: $MSYSTEM"
           echo "uname -s: $(uname -s)"

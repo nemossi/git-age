@@ -3,14 +3,15 @@
 set -e
 VERSION="0.1.0"
 
-# Password Management
 store_password()
 {
     local repo_id=$(get_repo_id)
     local password="$1"
     
     if [[ "$OSTYPE" == "msys"* ]]; then
-        echo "$password" | wincred store "git-age-$repo_id"
+        cmdkey /generic:"git-age-$repo_id" /user:"git-age" /pass:"$password" >/dev/null 2>&1 || {
+            echo "Warning: Failed to store password in Windows Credential Manager" >&2
+        }
     elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v secret-tool >/dev/null; then
         secret-tool store --label="git-age" repo "$repo_id" password "$password"
     elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -30,7 +31,8 @@ get_password()
     fi
 
     if [[ "$OSTYPE" == "msys"* ]]; then
-        wincred get "git-age-$repo_id" 2>/dev/null || prompt_password
+        password=$(cmdkey /list | grep "git-age-$repo_id" -A 1 | awk '/Password:/{print $2}' 2>/dev/null)
+        [[ -n "$password" ]] && echo "$password" || prompt_password
     elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v secret-tool >/dev/null; then
         secret-tool lookup repo "$repo_id" 2>/dev/null || prompt_password
     elif [[ "$OSTYPE" == "darwin"* ]]; then
