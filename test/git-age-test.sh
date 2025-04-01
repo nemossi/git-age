@@ -24,7 +24,7 @@ detect_os()
     fi
 
     # Check for Windows-specific environment variables
-    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]]; then
+    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]] || [[ "$(uname -o)" == "Msys" ]]; then
         echo "windows"
         return
     fi
