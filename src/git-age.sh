@@ -83,7 +83,7 @@ init()
     fi
     check_dependencies
 
-    # Check for command line arguments
+    # Credential management for symmetric/asymmetric encryption
     if [[ "$1" == "symmetric" ]]; then
         enc_choice=1
     elif [[ "$1" == "asymmetric" ]]; then
@@ -94,7 +94,6 @@ init()
         echo "2) Asymmetric (key-based)"
         read -p "Choice [1/2]: " enc_choice
     fi
-
     case "$enc_choice" in
         1)
             if [[ ! -t 0 ]]; then
@@ -107,29 +106,21 @@ init()
                 read -s -p "Confirm password: " password2
                 echo
             fi
-
             if [[ "$password1" != "$password2" ]]; then
                 echo "Error: Passwords do not match!" >&2
                 exit 1
             fi
             store_password "$password1"
+            echo "Symmetric encryption configured. Keep your password secure!"
             ;;
         2)
             if ! command -v age-keygen >/dev/null; then
                 echo "Error: age-keygen not found. Required for asymmetric encryption." >&2
                 exit 1
             fi
-            
             keyfile="$(git rev-parse --show-toplevel)/.git/git-age-key"
             age-keygen -o "$keyfile"
             pubkey="$(age-keygen -y "$keyfile")"
-            
-            git config filter.git-age.clean "git-age clean"
-            git config filter.git-age.smudge "git-age smudge"
-            git config filter.git-age.required true
-            git config age.publickey "$pubkey"
-            git config age.keyfile "$keyfile"
-            
             echo "Asymmetric encryption configured. Keep $keyfile secure!"
             ;;
         *)
@@ -138,9 +129,18 @@ init()
             ;;
     esac
 
+    # Integrate git-age into the git repository
+    git config filter.git-age.clean "git-age clean"
+    git config filter.git-age.smudge "git-age smudge"
+    git config filter.git-age.required true
+    git config age.publickey "$pubkey"
+    git config age.keyfile "$keyfile"
+    
+    # Set default .gitattributes to secret folder/files automatically
     cat > .gitattributes <<EOF
-# git-age encrypted files
+# git-age protected files
 *.secret filter=git-age diff=git-age
+.secret/* filter=git-age diff=git-age
 EOF
 
     echo "Initialized git-age for this repository."
