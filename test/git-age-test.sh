@@ -80,7 +80,7 @@ test_encryption()
     local secret_content=${4:-"test config"}
 
     echo "Testing $encryption_type encryption on $os_type"
-    setup_git_repo "$test_repo"
+    init_git_repo "$test_repo"
     init_git_age "$encryption_type"
     cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
