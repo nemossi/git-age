@@ -3,7 +3,7 @@
 # Detect OS type
 detect_os()
 {
-    # First check CI environment variables
+    # Check CI environment variables
     if [[ -n "$RUNNER_OS" ]]; then
         case "$RUNNER_OS" in
             Linux)
@@ -20,25 +20,31 @@ detect_os()
                 exit 1
                 ;;
         esac
-    elif [[ -n "$MSYSTEM" ]]; then
-        echo "windows"
-    else
-        case "$(uname -s)" in
-            Linux*)
-                echo "ubuntu"
-                ;;
-            Darwin*)
-                echo "macos"
-                ;;
-            CYGWIN*|MINGW32*|MINGW64*|MSYS*)
-                echo "windows"
-                ;;
-            *)
-                echo "Unsupported OS: $(uname -s)" >&2
-                exit 1
-                ;;
-        esac
+        return
     fi
+
+    # Check for Windows-specific environment variables
+    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]]; then
+        echo "windows"
+        return
+    fi
+
+    # Fallback to uname for other platforms
+    case "$(uname -s)" in
+        Linux*)
+            echo "ubuntu"
+            ;;
+        Darwin*)
+            echo "macos"
+            ;;
+        *_NT-*)
+            echo "windows"
+            ;;
+        *)
+            echo "Unsupported OS: $(uname -s)" >&2
+            exit 1
+            ;;
+    esac
 }
 
 # Install age on ubuntu, windows, and macos
