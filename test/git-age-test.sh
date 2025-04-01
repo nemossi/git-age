@@ -213,11 +213,12 @@ verify_if_decrypted()
             echo "ERROR: File is not decrypted" >&2
             exit 1
         fi
-        # Verify file permissions on Windows
-        if ((Get-Item .\$filename).Attributes -band [System.IO.FileAttributes]::ReadOnly) {
+
+        if ((Get-Item .\$filename).Attributes -band [System.IO.FileAttributes]::ReadOnly); then
             echo "ERROR: File should not be read-only after decryption" >&2
             exit 1
-        }
+        fi
+        
         Get-Content .\$filename | ./git-age.sh smudge || {
             echo "ERROR: Failed to smudge file" >&2
             exit 1
