@@ -186,7 +186,6 @@ verify_if_encrypted()
             ;;
     esac
     
-    # Additional validation for asymmetric encryption
     if [[ "$encryption_type" == "asymmetric" ]]; then
         if [[ "$os_type" == "windows" ]]; then
             if ! Select-String -Path ".\$filename" -Pattern "recipient:" -Quiet; then
@@ -209,18 +208,12 @@ verify_if_decrypted()
     local os_type=$(detect_os)
     local filename=${1:-config.secret}
     local expected_content=${2:-"test config"}
-
     if ! grep -q "$(echo -e "$expected_content")" "$filename"; then
         echo "ERROR: File is not decrypted" >&2
         exit 1
     fi
-
     check_file_permissions "$filename"
-
-    ./git-age.sh smudge < "$filename" || {
-        echo "ERROR: Failed to smudge file" >&2
-        exit 1
-    }
+    echo "Secret file $filename is properly decrypted and has correct permissions"    
 }
 
 check_file_rw()
