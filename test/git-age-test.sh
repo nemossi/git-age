@@ -74,14 +74,15 @@ install_age()
 test_encryption()
 {
     local os_type=$(detect_os)
-    local encryption_type=${1:-symmetric}
-    local test_repo=${2:-test-repo}
-    local secret_config=${3:-config.secret}
-    local secret_content=${4:-"test config"}
+    local binpath=${1-./git-age.sh}
+    local encryption_type=${2:-symmetric}
+    local test_repo=${3:-test-repo}
+    local secret_config=${4:-config.secret}
+    local secret_content=${5:-"test config"}
 
     echo "Testing $encryption_type encryption on $os_type"
     init_git_repo "$test_repo"
-    init_git_age "$encryption_type"
+    init_git_age "$binpath" "$encryption_type"
     cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
     verify_encryption "$secret_config"
@@ -92,16 +93,17 @@ test_encryption()
 test_decryption()
 {
     local os_type=$(detect_os)
-    local encryption_type=${1:-symmetric}
-    local test_repo=${2:-test-repo}
-    local secret_config=${3:-config.secret}
-    local secret_content=${4:-"test config"}
-    local clone_repo=${5:-test-repo-clone}
+    local binpath=${1-./git-age.sh}
+    local encryption_type=${2:-symmetric}
+    local test_repo=${3:-test-repo}
+    local secret_config=${4:-config.secret}
+    local secret_content=${5:-"test config"}
+    local clone_repo=${6:-test-repo-clone}
 
     echo "Testing $encryption_type decryption on $os_type"
     clone_git_repo "$test_repo" "$clone_repo"
     cd $clone_repo || exit 1
-    init_git_age "$encryption_type"
+    init_git_age "$binpath" "$encryption_type"
     verify_if_encrypted "$secret_config"
     git checkout -- .
     verify_if_decrypted "$secret_config" "$secret_content"
@@ -138,17 +140,17 @@ add_secret_config()
 
 init_git_age()
 {
-    cd test-repo || exit 1
-    cp ../src/git-age.sh .
+    local binpath=$1
+    cp "$binpath/git-age.sh" .
     chmod +x git-age.sh
     
-    local encryption_type=${1:-symmetric}
+    local encryption_type=${2:-symmetric}
     case "$encryption_type" in
         symmetric)
-            echo "testpassword" | ./git-age.sh init symmetric
+            echo "testpassword" | ./git-age.sh init "$encryption_type"
             ;;
         asymmetric)
-            ./git-age.sh init asymmetric
+            ./git-age.sh init "$encryption_type"
             export AGE_PUBKEY=$(git config age.publickey)
             export AGE_KEYFILE=$(git config age.keyfile)
             ;;

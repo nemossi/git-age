@@ -26,5 +26,5 @@ jobs:
           echo "uname -o: $(uname -o)"
           . ./test/git-age-test.sh
           install_age
-          test_encryption ${{ matrix.encryption_type }}
-          test_decryption ${{ matrix.encryption_type }}
+          test_encryption "./src" ${{ matrix.encryption_type }}
+          test_decryption "./src" ${{ matrix.encryption_type }}
