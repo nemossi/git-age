@@ -23,7 +23,7 @@ detect_os()
         return
     fi
 
-    if [[ -n "$(uname -s)"]]; then
+    if [[ -n "$(uname -s)" ]]; then
         case "$(uname -s)" in
             Linux*)
                 echo "ubuntu"
@@ -183,6 +183,22 @@ verify_if_encrypted()
             fi
             ;;
     esac
+    
+    # Additional validation for asymmetric encryption
+    if [[ "$encryption_type" == "asymmetric" ]]; then
+        if [[ "$os_type" == "windows" ]]; then
+            if ! Select-String -Path ".\$filename" -Pattern "recipient:" -Quiet; then
+                echo "ERROR: Asymmetric encryption missing recipient header" >&2
+                exit 1
+            fi
+        else
+            if ! grep -q "recipient:" "$filename"; then
+                echo "ERROR: Asymmetric encryption missing recipient header" >&2
+                exit 1
+            fi
+        fi
+    fi
+    
     echo "Secret file $filename is properly encrypted"
 }
 
@@ -197,6 +213,11 @@ verify_if_decrypted()
             echo "ERROR: File is not decrypted" >&2
             exit 1
         fi
+        # Verify file permissions on Windows
+        if ((Get-Item .\$filename).Attributes -band [System.IO.FileAttributes]::ReadOnly) {
+            echo "ERROR: File should not be read-only after decryption" >&2
+            exit 1
+        }
         Get-Content .\$filename | ./git-age.sh smudge || {
             echo "ERROR: Failed to smudge file" >&2
             exit 1
@@ -204,6 +225,11 @@ verify_if_decrypted()
     else
         if ! grep -q "$expected_content" "$filename"; then
             echo "ERROR: File is not decrypted" >&2
+            exit 1
+        fi
+        # Verify file permissions on Unix
+        if [[ "$(stat -c '%a' "$filename")" != "644" ]]; then
+            echo "ERROR: File permissions should be 644 after decryption" >&2
             exit 1
         fi
         ./git-age.sh smudge < "$filename" || {
