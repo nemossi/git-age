@@ -23,34 +23,37 @@ detect_os()
         return
     fi
 
-    # Check for Windows-specific environment variables
-    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]] || [[ "$(uname -o)" == "Msys" ]] || [[ "$OSTYPE" == "msys" ]]; then
-        echo "windows"
+    if [[ -n "$(uname -s)"]]; then
+        case "$(uname -s)" in
+            Linux*)
+                echo "ubuntu"
+                ;;
+            Darwin*)
+                echo "macos"
+                ;;
+            CYGWIN*|MINGW32*|MINGW64*|MSYS*|*_NT-*)
+                echo "windows"
+                ;;
+            *)
+                echo "Unsupported OS: $(uname -s)" >&2
+                exit 1
+                ;;
+        esac
         return
     fi
 
-    # Fallback to uname for other platforms
-    case "$(uname -s)" in
-        Linux*)
-            echo "ubuntu"
-            ;;
-        Darwin*)
-            echo "macos"
-            ;;
-        CYGWIN*|MINGW32*|MINGW64*|MSYS*|*_NT-*)
-            echo "windows"
-            ;;
-        *)
-            echo "Unsupported OS: $(uname -s)" >&2
-            exit 1
-            ;;
-    esac
+    # Check for Windows-specific environment variables
+    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -o)" == "Msys" ]]; then
+        echo "windows"
+        return
+    fi
 }
 
 # Install age on ubuntu, windows, and macos
 install_age()
 {
-    case "$1" in
+    local os_type=$(detect_os)
+    case "$os_type" in
         ubuntu)
             sudo apt-get update
             sudo apt-get install -y age
@@ -62,7 +65,7 @@ install_age()
             brew install age
             ;;
         *)
-            echo "Unsupported OS: $1"
+            echo "Unsupported OS: $os_type" >&2
             exit 1
             ;;
     esac
