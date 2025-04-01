@@ -71,6 +71,14 @@ install_age()
     esac
 }
 
+init_git_user()
+{
+    local email=${1-git-age-test@example.com}
+    local name=${2-Git Age Test}
+    git config --global user.email "$email"
+    git config --global user.name "$name"
+}
+
 test_encryption()
 {
     local os_type=$(detect_os)
