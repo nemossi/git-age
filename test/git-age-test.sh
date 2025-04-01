@@ -21,7 +21,7 @@ detect_os()
                 ;;
         esac
     else
-        # Fall back to uname detection
+        # Fall back to uname detection with additional checks for Git Bash
         case "$(uname -s)" in
             Linux*)
                 echo "ubuntu"
@@ -29,7 +29,7 @@ detect_os()
             Darwin*)
                 echo "macos"
                 ;;
-            CYGWIN*|MINGW*|MSYS*)
+            CYGWIN*|MINGW32*|MINGW64*|MSYS*)
                 echo "windows"
                 ;;
             *)
