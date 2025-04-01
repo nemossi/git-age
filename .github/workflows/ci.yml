@@ -19,6 +19,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test encryption and decryption
         shell: bash
+        env:
+          RUNNER_OS: ${{ runner.os }}
         run: |
           . ./test/git-age-test.sh
           install_age

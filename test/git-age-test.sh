@@ -3,6 +3,11 @@
 # Detect OS type
 detect_os()
 {
+    echo "Debug: Checking environment variables"
+    echo "RUNNER_OS: $RUNNER_OS"
+    echo "MSYSTEM: $MSYSTEM"
+    echo "uname -s: $(uname -s)"
+    echo "uname -o: $(uname -o)"
     # Check CI environment variables
     if [[ -n "$RUNNER_OS" ]]; then
         case "$RUNNER_OS" in
