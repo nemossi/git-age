@@ -77,7 +77,7 @@ test_encryption()
     local encryption_type=${2:-symmetric}
     local test_repo=${3:-test-repo}
     local secret_config=${4:-config.secret}
-    local secret_content=${5:-"test config"}
+    local secret_content=${5:-"test secret config"}
 
     echo "Testing $encryption_type encryption..."
     init_git_repo "$test_repo"
@@ -95,7 +95,7 @@ test_decryption()
     local encryption_type=${2:-symmetric}
     local test_repo=${3:-test-repo}
     local secret_config=${4:-config.secret}
-    local secret_content=${5:-"test config"}
+    local secret_content=${5:-"test secret config"}
     local clone_repo=${6:-test-repo-clone}
 
     echo "Testing $encryption_type decryption..."
@@ -141,20 +141,34 @@ add_secret_config()
     local filename=${1:-config.secret}
     local content=${2:-"test secret config"}
 
+    # Create the file with the secret content
     echo "$content" > "$filename"
     sleep 1
+
+    # First check if file exists in filesystem
+    if [ ! -f "$filename" ]; then
+        echo "ERROR: File $filename not created" >&2
+        exit 1
+    fi
+
+    # Stage the file with forced filter application
     git add --renormalize "$filename" || { 
         echo "ERROR: Failed to stage file $filename" >&2
-        git status
+        echo "Debug - file contents:"
+        cat "$filename"
+        echo "Git status:"
+        git status -v
         exit 1
     }
 
+    # Verify file is properly tracked
     if ! git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
-        echo "ERROR: File $filename not staged" >&2
-        git status
+        echo "ERROR: File $filename not tracked in git index" >&2
+        echo "Debug - git index status:"
+        git ls-files --stage
         exit 1
     fi
-    
+
     git commit -m "Add encrypted config"
     echo "Post-commit file status:"
     git ls-files --eol "$filename"
