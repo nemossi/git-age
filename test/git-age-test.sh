@@ -73,34 +73,32 @@ install_age()
 
 test_encryption()
 {
-    local os_type=$(detect_os)
-    local binpath=${1-./git-age.sh}
+    local binpath=${1-.}
     local encryption_type=${2:-symmetric}
     local test_repo=${3:-test-repo}
     local secret_config=${4:-config.secret}
     local secret_content=${5:-"test config"}
 
-    echo "Testing $encryption_type encryption on $os_type"
+    echo "Testing $encryption_type encryption..."
     init_git_repo "$test_repo"
     init_git_age "$binpath" "$encryption_type"
     cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
     verify_if_encrypted "$encryption_type" "$secret_config"
     cd ..
-    echo "$encryption_type encryption test passed on $os_type"
+    echo "$encryption_type encryption test passed."
 }
 
 test_decryption()
 {
-    local os_type=$(detect_os)
-    local binpath=${1-./git-age.sh}
+    local binpath=${1-.}
     local encryption_type=${2:-symmetric}
     local test_repo=${3:-test-repo}
     local secret_config=${4:-config.secret}
     local secret_content=${5:-"test config"}
     local clone_repo=${6:-test-repo-clone}
 
-    echo "Testing $encryption_type decryption on $os_type"
+    echo "Testing $encryption_type decryption..."
     clone_git_repo "$test_repo" "$clone_repo"
     cd $clone_repo || exit 1
     init_git_age "$binpath" "$encryption_type"
@@ -108,7 +106,7 @@ test_decryption()
     git checkout -- .
     verify_if_decrypted "$secret_config" "$secret_content"
     cd ..
-    echo "$encryption_type decryption test passed on $os_type"
+    echo "$encryption_type decryption test passed."
 }
 
 init_git_repo()
@@ -181,12 +179,14 @@ verify_if_encrypted()
     fi
     
     if ! grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
+        cat "$filename"
         echo "ERROR: File $filename is not properly encrypted (missing AGE header)" >&2
         exit 1
     fi
     
     if [[ "$encryption_type" == "asymmetric" ]]; then
         if ! grep -q "recipient:" "$filename"; then
+            cat "$filename"
             echo "ERROR: Asymmetric encryption missing recipient header" >&2
             exit 1
         fi
@@ -201,6 +201,7 @@ verify_if_decrypted()
     local filename=${1:-config.secret}
     local expected_content=${2:-"test config"}
     if ! grep -q "$(echo -e "$expected_content")" "$filename"; then
+        cat "$filename"
         echo "ERROR: File is not decrypted" >&2
         exit 1
     fi
