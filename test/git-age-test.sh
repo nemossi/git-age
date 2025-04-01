@@ -207,35 +207,47 @@ verify_if_decrypted()
     local os_type=$(detect_os)
     local filename=${1:-config.secret}
     local expected_content=${2:-"test config"}
-    
-    if [[ "$os_type" == "windows" ]]; then
-        if ! (Select-String -Path .\$filename -Pattern "$expected_content" -Quiet); then
-            echo "ERROR: File is not decrypted" >&2
-            exit 1
-        fi
 
-        if ((Get-Item .\$filename).Attributes -band [System.IO.FileAttributes]::ReadOnly); then
-            echo "ERROR: File should not be read-only after decryption" >&2
-            exit 1
-        fi
-        
-        Get-Content .\$filename | ./git-age.sh smudge || {
-            echo "ERROR: Failed to smudge file" >&2
-            exit 1
-        }
-    else
-        if ! grep -q "$expected_content" "$filename"; then
-            echo "ERROR: File is not decrypted" >&2
-            exit 1
-        fi
-        # Verify file permissions on Unix
-        if [[ "$(stat -c '%a' "$filename")" != "644" ]]; then
-            echo "ERROR: File permissions should be 644 after decryption" >&2
-            exit 1
-        fi
-        ./git-age.sh smudge < "$filename" || {
-            echo "ERROR: Failed to smudge file" >&2
-            exit 1
-        }
+    if ! grep -q "$(echo -e "$expected_content")" "$filename"; then
+        echo "ERROR: File is not decrypted" >&2
+        exit 1
     fi
+
+    check_file_permissions "$filename"
+
+    ./git-age.sh smudge < "$filename" || {
+        echo "ERROR: Failed to smudge file" >&2
+        exit 1
+    }
+}
+
+check_file_rw()
+{
+    local os_type=$(detect_os)
+    local filename=${1:-config.secret}
+
+    case "os_type" in
+        ubuntu)
+            if [[ "$(stat -c '%a' "$filename")" != "644" ]]; then
+                echo "ERROR: File permissions should be 644 after decryption" >&2
+                exit 1
+            fi
+            ;;
+        windows)
+            if attrib "$filename" | grep -q "R "; then
+                echo "ERROR: File should not be read-only after decryption" >&2
+                exit 1
+            fi
+            ;;
+        macos)
+            if [[ "$(stat -f '%OLp' "$filename")" != "644" ]]; then
+                echo "ERROR: File permissions should be 644 after decryption" >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unsupported OS: $os_type" >&2
+            exit 1
+            ;;
+    esac
 }
