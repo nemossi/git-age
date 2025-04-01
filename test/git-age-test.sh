@@ -59,7 +59,7 @@ install_age()
             sudo apt-get install -y age
             ;;
         windows)
-            choco install age
+            choco install age.portable
             ;;
         macos)
             brew install age
