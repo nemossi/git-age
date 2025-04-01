@@ -140,9 +140,21 @@ add_secret_config()
 {
     local filename=${1:-config.secret}
     local content=${2:-"test secret config"}
+
     echo "$content" > "$filename"
     sleep 1
-    git add --renormalize .    
+    git add --renormalize "$filename" || { 
+        echo "ERROR: Failed to stage file $filename" >&2
+        git status
+        exit 1
+    }
+
+    if ! git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
+        echo "ERROR: File $filename not staged" >&2
+        git status
+        exit 1
+    fi
+    
     git commit -m "Add encrypted config"
     echo "Post-commit file status:"
     git ls-files --eol "$filename"
@@ -188,7 +200,7 @@ verify_if_encrypted()
 
     local blob_hash=$(git hash-object "$filename")
     local git_content=$(git cat-file -p "$blob_hash")
-    
+
     local git_content=$(git show ":$filename")
     if ! echo "$git_content" | grep -q "BEGIN AGE ENCRYPTED FILE"; then
         echo "RAW_GIT_CONTENT: $git_content"
