@@ -23,6 +23,11 @@ jobs:
           RUNNER_OS: ${{ runner.os }}
         run: |
           . ./test/git-age-test.sh
+          echo "Debug: Checking environment variables"
+          echo "RUNNER_OS: $RUNNER_OS"
+          echo "MSYSTEM: $MSYSTEM"
+          echo "uname -s: $(uname -s)"
+          echo "uname -o: $(uname -o)"
           install_age
           test_encryption ${{ matrix.encryption_type }}
           test_decryption ${{ matrix.encryption_type }}

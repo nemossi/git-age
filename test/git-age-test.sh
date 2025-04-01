@@ -3,11 +3,6 @@
 # Detect OS type
 detect_os()
 {
-    echo "Debug: Checking environment variables"
-    echo "RUNNER_OS: $RUNNER_OS"
-    echo "MSYSTEM: $MSYSTEM"
-    echo "uname -s: $(uname -s)"
-    echo "uname -o: $(uname -o)"
     # Check CI environment variables
     if [[ -n "$RUNNER_OS" ]]; then
         case "$RUNNER_OS" in
@@ -29,7 +24,7 @@ detect_os()
     fi
 
     # Check for Windows-specific environment variables
-    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]] || [[ "$(uname -o)" == "Msys" ]]; then
+    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -s)" =~ ^(CYGWIN|MINGW32|MINGW64|MSYS|.*_NT-).*$ ]] || [[ "$(uname -o)" == "Msys" ]] || [[ "$OSTYPE" == "msys" ]]; then
         echo "windows"
         return
     fi
@@ -42,7 +37,7 @@ detect_os()
         Darwin*)
             echo "macos"
             ;;
-        *_NT-*)
+        CYGWIN*|MINGW32*|MINGW64*|MSYS*|*_NT-*)
             echo "windows"
             ;;
         *)
