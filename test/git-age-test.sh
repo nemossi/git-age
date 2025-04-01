@@ -200,8 +200,9 @@ init_git_age()
     if ! git diff --quiet -- .gitattributes; then
         git add .gitattributes
         git commit -m "Initialize git-age filters"
+        echo "git-age filters in .gitattributes file was committed."
     else
-        echo "git-age filters are already initialized."
+        echo "git-age filters in .gitattributes file are already initialized (skip committing)."
     fi
 }
 
