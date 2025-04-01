@@ -3,21 +3,41 @@
 # Detect OS type
 detect_os()
 {
-    case "$(uname -s)" in
-        Linux*)
-            echo "ubuntu"
-            ;;
-        Darwin*)
-            echo "macos"
-            ;;
-        CYGWIN*|MINGW*|MSYS*)
-            echo "windows"
-            ;;
-        *)
-            echo "Unsupported OS" >&2
-            exit 1
-            ;;
-    esac
+    # First check CI environment variables
+    if [[ -n "$RUNNER_OS" ]]; then
+        case "$RUNNER_OS" in
+            Linux)
+                echo "ubuntu"
+                ;;
+            macOS)
+                echo "macos"
+                ;;
+            Windows)
+                echo "windows"
+                ;;
+            *)
+                echo "Unsupported CI OS: $RUNNER_OS" >&2
+                exit 1
+                ;;
+        esac
+    else
+        # Fall back to uname detection
+        case "$(uname -s)" in
+            Linux*)
+                echo "ubuntu"
+                ;;
+            Darwin*)
+                echo "macos"
+                ;;
+            CYGWIN*|MINGW*|MSYS*)
+                echo "windows"
+                ;;
+            *)
+                echo "Unsupported OS: $(uname -s)" >&2
+                exit 1
+                ;;
+        esac
+    fi
 }
 
 # Install age on ubuntu, windows, and macos

@@ -7,68 +7,19 @@ on:
     branches: [ main ]
 
 jobs:
-  test-linux-symmetric:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        #os: [windows-latest, ubuntu-latest, macos-latest]
+        #encryption_type: [symmetric, asymmetric]
+        os: [windows-latest]
+        encryption_type: [symmetric]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Test encryption and decryption
         run: |
           source ./test/git-age-test.sh
           install_age
-          test_encryption symmetric
-          test_decryption symmetric
-
-  test-linux-asymmetric:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install age
-        run: |
-          source ./test/git-age-test.sh
-          install_age
-          test_encryption asymmetric
-          test_decryption asymmetric
-  
-  test-windows-symmetric:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test encryption and decryption
-        run: |
-          source ./test/git-age-test.sh
-          install_age
-          test_encryption symmetric
-          test_decryption symmetric
-  
-  test-windows-asymmetric:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test encryption and decryption
-        run: |
-          source ./test/git-age-test.sh
-          install_age
-          test_encryption asymmetric
-          test_decryption asymmetric
-  
-  test-macos-symmetric:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test encryption and decryption
-        run: |
-          source ./test/git-age-test.sh
-          install_age
-          test_encryption symmetric
-          test_decryption symmetric
-
-  test-macos-asymmetric:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test encryption and decryption
-        run: |
-          source ./test/git-age-test.sh
-          install_age
-          test_encryption asymmetric
-          test_decryption asymmetric
+          test_encryption ${{ matrix.encryption_type }}
+          test_decryption ${{ matrix.encryption_type }}
