@@ -178,21 +178,22 @@ verify_if_encrypted()
         exit 1
     fi
     
-    if ! grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
-        cat "$filename"
-        echo "ERROR: File $filename is not properly encrypted (missing AGE header)" >&2
+    local git_content=$(git show ":$filename")
+    if ! echo "$git_content" | grep -q "BEGIN AGE ENCRYPTED FILE"; then
+        echo "$git_content"
+        echo "ERROR: File $filename is not properly encrypted in Git index (missing AGE header)" >&2
         exit 1
     fi
     
     if [[ "$encryption_type" == "asymmetric" ]]; then
-        if ! grep -q "recipient:" "$filename"; then
-            cat "$filename"
-            echo "ERROR: Asymmetric encryption missing recipient header" >&2
+        if ! echo "$git_content" | grep -q "recipient:"; then
+            echo "$git_content"
+            echo "ERROR: Asymmetric encryption missing recipient header in Git index" >&2
             exit 1
         fi
     fi
     
-    echo "Secret file $filename is properly encrypted"
+    echo "Secret file $filename is properly encrypted in Git index"
 }
 
 verify_if_decrypted()
