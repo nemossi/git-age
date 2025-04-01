@@ -4,7 +4,8 @@ set -e
 VERSION="0.1.0"
 
 # Password Management
-store_password() {
+store_password()
+{
     local repo_id=$(get_repo_id)
     local password="$1"
     
@@ -19,7 +20,8 @@ store_password() {
     fi
 }
 
-get_password() {
+get_password()
+{
     local repo_id=$(get_repo_id)
     
     if [[ -n "$GIT_AGE_PASSPHRASE" ]]; then
@@ -38,18 +40,21 @@ get_password() {
     fi
 }
 
-prompt_password() {
+prompt_password()
+{
     read -s -p "Enter git-age password: " password
     echo
     echo "$password"
 }
 
-get_repo_id() {
+get_repo_id()
+{
     git rev-parse --show-toplevel | xargs basename || echo "default"
 }
 
 # Encryption (clean filter)
-clean() {
+clean()
+{
     if [[ -n "$AGE_PUBKEY" ]]; then
         age -a -r "$AGE_PUBKEY"
     else
@@ -58,7 +63,8 @@ clean() {
 }
 
 # Decryption (smudge filter)
-smudge() {
+smudge()
+{
     if [[ -n "$AGE_PUBKEY" ]]; then
         age -d -i "$AGE_KEYFILE"
     else
@@ -67,7 +73,8 @@ smudge() {
 }
 
 # Initialize repository
-init() {
+init()
+{
     if git config filter.git-age.clean >/dev/null; then
         echo "Error: git-age already initialized in this repository" >&2
         exit 1
@@ -137,14 +144,16 @@ EOF
     echo "Initialized git-age for this repository."
 }
 
-check_dependencies() {
+check_dependencies()
+{
     if ! command -v age >/dev/null; then
         echo "Error: age not installed. Get it from https://github.com/FiloSottile/age" >&2
         exit 1
     fi
 }
 
-show_status() {
+show_status()
+{
     echo "Git Config:"
     git config --get-regexp 'filter\.git-age' || echo "Not configured"
     git config --get-regexp 'age\.' || echo "No age keys configured"
@@ -153,12 +162,12 @@ show_status() {
 }
 
 case "$1" in
-    version) echo "git-age version v$VERSION"; exit 0 ;;
-    clean)    clean ;;
-    smudge)   smudge ;;
-    init)     init ;;
-    status)   show_status ;;
-    *)        echo "Usage: git-age {init|clean|smudge|status|version}"; 
-             echo "Note: You can set GIT_AGE_PASSPHRASE environment variable to skip password prompt";
-             exit 1 ;;
+    version)    echo "git-age version v$VERSION"; exit 0 ;;
+    clean)      clean ;;
+    smudge)     smudge ;;
+    init)       init ;;
+    status)     show_status ;;
+    *)          echo "Usage: git-age {init|clean|smudge|status|version}"; 
+                echo "Note: You can set GIT_AGE_PASSPHRASE environment variable to skip password prompt";
+                exit 1 ;;
 esac
