@@ -195,6 +195,14 @@ init_git_age()
             exit 1
             ;;
     esac
+
+    # Commit .gitattributes to activate filters if required
+    if ! git diff --quiet -- .gitattributes; then
+        git add .gitattributes
+        git commit -m "Initialize git-age filters"
+    else
+        echo "git-age filters are already initialized."
+    fi
 }
 
 verify_if_encrypted()
