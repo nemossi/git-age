@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test encryption and decryption
         run: |
-          source ./test/git-age-test.sh
+          . ./test/git-age-test.sh
           install_age
           test_encryption ${{ matrix.encryption_type }}
           test_decryption ${{ matrix.encryption_type }}
