@@ -5,8 +5,8 @@ VERSION="0.1.0"
 
 store_password()
 {
-    local repo_id=$(get_repo_id)
-    local password="$1"
+    local repo_id="$1"
+    local password="$2"
     
     if [[ "$OSTYPE" == "msys"* ]]; then
         cmdkey /generic:"git-age-$repo_id" /user:"git-age" /pass:"$password" >/dev/null 2>&1 || {
@@ -110,7 +110,8 @@ init()
                 echo "Error: Passwords do not match!" >&2
                 exit 1
             fi
-            store_password "$password1"
+            local repo_id="$(get_repo_id)"
+            store_password “$repo_id” "$password1"
             echo "Symmetric encryption configured. Keep your password secure!"
             ;;
         2)
@@ -118,9 +119,11 @@ init()
                 echo "Error: age-keygen not found. Required for asymmetric encryption." >&2
                 exit 1
             fi
-            keyfile="$(git rev-parse --show-toplevel)/.git/git-age-key"
+            local keyfile="$(git rev-parse --show-toplevel)/.git/git-age-key"
             age-keygen -o "$keyfile"
-            pubkey="$(age-keygen -y "$keyfile")"
+            local pubkey="$(age-keygen -y "$keyfile")"
+            git config age.publickey "$pubkey"
+            git config age.keyfile "$keyfile"
             echo "Asymmetric encryption configured. Keep $keyfile secure!"
             ;;
         *)
@@ -133,17 +136,22 @@ init()
     git config filter.git-age.clean "git-age clean"
     git config filter.git-age.smudge "git-age smudge"
     git config filter.git-age.required true
-    git config age.publickey "$pubkey"
-    git config age.keyfile "$keyfile"
+    echo "Initialized git-age filters for this repository."
     
     # Set default .gitattributes to secret folder/files automatically
+    if [ -f .gitattributes ]; then
+        cp .gitattributes .gitattributes.bak
+    fi
     cat > .gitattributes <<EOF
 # git-age protected files
-*.secret filter=git-age diff=git-age
-.secret/* filter=git-age diff=git-age
+*.secret filter=git-age diff=git-age eol=lf
+.secret/* filter=git-age diff=git-age eol=lf
 EOF
-
-    echo "Initialized git-age for this repository."
+    if [ -f .gitattributes.bak ]; then
+        grep -vE 'filter=git-age|\.secret' .gitattributes.bak >> .gitattributes
+        rm .gitattributes.bak
+    fi
+    echo "Initialized default git-age .gitattributes for this repository."
 }
 
 check_dependencies()
