@@ -165,7 +165,7 @@ case "$1" in
     version)    echo "git-age version v$VERSION"; exit 0 ;;
     clean)      clean ;;
     smudge)     smudge ;;
-    init)       init ;;
+    init)       init "$2" ;;
     status)     show_status ;;
     *)          echo "Usage: git-age {init|clean|smudge|status|version}"; 
                 echo "Note: You can set GIT_AGE_PASSPHRASE environment variable to skip password prompt";
