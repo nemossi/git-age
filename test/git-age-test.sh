@@ -141,8 +141,11 @@ add_secret_config()
     local filename=${1:-config.secret}
     local content=${2:-"test secret config"}
     echo "$content" > "$filename"
-    git add "$filename"
+    sleep 1
+    git add --renormalize .    
     git commit -m "Add encrypted config"
+    echo "Post-commit file status:"
+    git ls-files --eol "$filename"
 }
 
 init_git_age()
@@ -178,16 +181,24 @@ verify_if_encrypted()
         exit 1
     fi
     
+    if grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
+        echo "ERROR: Working copy should be decrypted" >&2
+        exit 1
+    fi
+
+    local blob_hash=$(git hash-object "$filename")
+    local git_content=$(git cat-file -p "$blob_hash")
+    
     local git_content=$(git show ":$filename")
     if ! echo "$git_content" | grep -q "BEGIN AGE ENCRYPTED FILE"; then
-        echo "$git_content"
+        echo "RAW_GIT_CONTENT: $git_content"
         echo "ERROR: File $filename is not properly encrypted in Git index (missing AGE header)" >&2
         exit 1
     fi
     
     if [[ "$encryption_type" == "asymmetric" ]]; then
         if ! echo "$git_content" | grep -q "recipient:"; then
-            echo "$git_content"
+            echo "RAW_GIT_CONTENT: $git_content"
             echo "ERROR: Asymmetric encryption missing recipient header in Git index" >&2
             exit 1
         fi
