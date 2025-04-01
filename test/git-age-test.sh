@@ -20,8 +20,9 @@ detect_os()
                 exit 1
                 ;;
         esac
+    elif [[ -n "$MSYSTEM" ]]; then
+        echo "windows"
     else
-        # Fall back to uname detection with additional checks for Git Bash
         case "$(uname -s)" in
             Linux*)
                 echo "ubuntu"
