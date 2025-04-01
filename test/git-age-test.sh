@@ -85,7 +85,7 @@ test_encryption()
     init_git_age "$binpath" "$encryption_type"
     cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
-    verify_if_encrypted "$secret_config"
+    verify_if_encrypted "$encryption_type" "$secret_config"
     cd ..
     echo "$encryption_type encryption test passed on $os_type"
 }
@@ -104,7 +104,7 @@ test_decryption()
     clone_git_repo "$test_repo" "$clone_repo"
     cd $clone_repo || exit 1
     init_git_age "$binpath" "$encryption_type"
-    verify_if_encrypted "$secret_config"
+    verify_if_encrypted "$encryption_type" "$secret_config"
     git checkout -- .
     verify_if_decrypted "$secret_config" "$secret_content"
     cd ..
@@ -172,40 +172,23 @@ init_git_age()
 
 verify_if_encrypted()
 {
-    local os_type=$(detect_os)
-    local filename=${1:-config.secret}
+    local encryption_type=${1:-symmetric}
+    local filename=${2:-config.secret}
     
     if [ ! -f "$filename" ]; then
         echo "ERROR: File $filename does not exist" >&2
         exit 1
     fi
     
-    case "$os_type" in
-        windows)
-            if ! Select-String -Path ".\$filename" -Pattern "BEGIN AGE ENCRYPTED FILE" -Quiet; then
-                echo "ERROR: File $filename is not properly encrypted (missing AGE header)" >&2
-                exit 1
-            fi
-            ;;
-        *)
-            if ! grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
-                echo "ERROR: File $filename is not properly encrypted (missing AGE header)" >&2
-                exit 1
-            fi
-            ;;
-    esac
+    if ! grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
+        echo "ERROR: File $filename is not properly encrypted (missing AGE header)" >&2
+        exit 1
+    fi
     
     if [[ "$encryption_type" == "asymmetric" ]]; then
-        if [[ "$os_type" == "windows" ]]; then
-            if ! Select-String -Path ".\$filename" -Pattern "recipient:" -Quiet; then
-                echo "ERROR: Asymmetric encryption missing recipient header" >&2
-                exit 1
-            fi
-        else
-            if ! grep -q "recipient:" "$filename"; then
-                echo "ERROR: Asymmetric encryption missing recipient header" >&2
-                exit 1
-            fi
+        if ! grep -q "recipient:" "$filename"; then
+            echo "ERROR: Asymmetric encryption missing recipient header" >&2
+            exit 1
         fi
     fi
     
