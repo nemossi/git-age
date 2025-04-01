@@ -71,14 +71,6 @@ install_age()
     esac
 }
 
-init_git_user()
-{
-    local email=${1-git-age-test@example.com}
-    local name=${2-Git Age Test}
-    git config --global user.email "$email"
-    git config --global user.name "$name"
-}
-
 test_encryption()
 {
     local os_type=$(detect_os)
@@ -93,7 +85,7 @@ test_encryption()
     init_git_age "$binpath" "$encryption_type"
     cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
-    verify_encryption "$secret_config"
+    verify_if_encrypted "$secret_config"
     cd ..
     echo "$encryption_type encryption test passed on $os_type"
 }
@@ -125,7 +117,16 @@ init_git_repo()
     mkdir "$repo_name"
     cd "$repo_name" || exit 1
     git init
+    init_git_user
     cd ..
+}
+
+init_git_user()
+{
+    local email=${1-git-age-test@example.com}
+    local name=${2-Git Age Test}
+    git config user.email "$email"
+    git config user.name "$name"
 }
 
 clone_git_repo()

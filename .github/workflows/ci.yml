@@ -27,6 +27,5 @@ jobs:
           echo "uname -o: $(uname -o)"
           . ./test/git-age-test.sh
           install_age
-          init_git_user
           test_encryption "./src" ${{ matrix.encryption_type }}
           test_decryption "./src" ${{ matrix.encryption_type }}
