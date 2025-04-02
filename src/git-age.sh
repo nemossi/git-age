@@ -1,10 +1,20 @@
 #!/bin/bash
 # git-age: Cross-platform Git transparent encryption (age-based)
 set -euo pipefail
-VERSION="0.1.1"
+VERSION="0.1.2"
 
-show_help()
-{
+# Initialize temp file variable
+temp_file=""
+
+# Cleanup function
+cleanup() {
+    if [[ -n "${temp_file:-}" && -f "$temp_file" ]]; then
+        rm -f "$temp_file" >/dev/null 2>&1
+    fi
+}
+trap cleanup EXIT
+
+show_help() {
     cat <<EOF
 git-age v${VERSION} - Git transparent encryption tool
 
@@ -24,19 +34,35 @@ Environment Variables:
 Notes:
   1. Run 'git-age init' first to set up encryption
   2. Always back up your passwords/keys securely
+  3. For symmetric encryption, use at least 12 character passwords
 EOF
+}
+
+validate_config()
+{
+    if [[ -n "${AGE_PUBKEY:-}" && ! "${AGE_PUBKEY}" =~ ^age1[0-9a-z]+$ ]]; then
+        echo "Error: Invalid AGE_PUBKEY format" >&2
+        exit 1
+    fi
+    
+    if [[ -n "${AGE_KEYFILE:-}" && ! -f "${AGE_KEYFILE}" ]]; then
+        echo "Error: AGE_KEYFILE not found: ${AGE_KEYFILE}" >&2
+        exit 1
+    fi
 }
 
 store_password()
 {
     local repo_id="$1"
     local password="$2"
-    
     if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
-        pwsh -Command "\
+        local escaped_password=$(printf '%q' "$password")
+        powershell -Command "\
             [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); \
-            \$cred = New-Object System.Management.Automation.PSCredential('git-age', (ConvertTo-SecureString -String '$password' -AsPlainText -Force)); \
-            \$cred.GetNetworkCredential().Password | cmdkey /add:'git-age-$repo_id' /user:'git-age' /pass:stdin" >/dev/null 2>&1 || {
+            \$cred = New-Object System.Management.Automation.PSCredential('git-age', \
+            (ConvertTo-SecureString -String $escaped_password -AsPlainText -Force)); \
+            \$cred.GetNetworkCredential().Password | \
+            cmdkey /add:\"git-age-$repo_id\" /user:\"git-age\" /pass:stdin" >/dev/null 2>&1 || {
             echo "Warning: Failed to store password in Windows Credential Manager" >&2
         }
     elif [[ "$OSTYPE" == "linux-gnu"* ]] && command -v secret-tool >/dev/null; then
@@ -48,7 +74,8 @@ store_password()
     fi
 }
 
-get_password() {
+get_password()
+{
     local repo_id=$(get_repo_id)
     
     if [[ -n "${AGE_PASSWORD:-}" ]]; then
@@ -71,7 +98,8 @@ get_password() {
     fi
 }
 
-prompt_password() {
+prompt_password()
+{
     local password
     local attempt=0
     local max_attempts=3
@@ -92,7 +120,8 @@ prompt_password() {
     exit 1
 }
 
-get_repo_id() {
+get_repo_id()
+{
     local repo_path
     if ! repo_path=$(git rev-parse --show-toplevel 2>/dev/null); then
         echo "Error: Not a git repository" >&2
@@ -101,33 +130,56 @@ get_repo_id() {
     basename "$repo_path" || echo "default"
 }
 
-clean() {
+clean()
+{
+    validate_config
+    
     if [[ -n "${AGE_PUBKEY:-}" ]]; then
-        age -a -r "$AGE_PUBKEY"
+        if ! age -a -r "$AGE_PUBKEY"; then
+            echo "Error: Encryption failed" >&2
+            exit 1
+        fi
     else
-        get_password | age -a -p --passphrase
+        if ! get_password | age -a -p --passphrase; then
+            echo "Error: Encryption failed" >&2
+            exit 1
+        fi
     fi
 }
 
-smudge() {
+smudge()
+{
+    validate_config
+    
+    temp_file=$(mktemp)
     if [[ -n "${AGE_KEYFILE:-}" && -f "$AGE_KEYFILE" ]]; then
-        age -d -i "$AGE_KEYFILE"
+        if ! age -d -i "$AGE_KEYFILE" > "$temp_file"; then
+            echo "Error: Decryption failed" >&2
+            exit 1
+        fi
+        cat "$temp_file"
     elif [[ -n "${AGE_PUBKEY:-}" ]]; then
         echo "Error: AGE_KEYFILE environment variable required" >&2
         exit 1
     else
-        get_password | age -d --passphrase
+        if ! get_password | age -d --passphrase > "$temp_file"; then
+            echo "Error: Decryption failed" >&2
+            exit 1
+        fi
+        cat "$temp_file"
     fi
 }
 
-check_dependencies() {
+check_dependencies()
+{
     if ! command -v age >/dev/null; then
         echo "Error: age tool not found. Install from https://github.com/FiloSottile/age" >&2
         exit 1
     fi
 }
 
-init() {
+init()
+{
     if git config filter.git-age.clean >/dev/null; then
         echo "Error: git-age already initialized in this repository" >&2
         exit 1
@@ -165,6 +217,11 @@ init() {
             
             if [[ "$password1" != "$password2" ]]; then
                 echo "Error: Passwords do not match!" >&2
+                exit 1
+            fi
+            
+            if [[ ${#password1} -lt 12 ]]; then
+                echo "Error: Password must be at least 12 characters" >&2
                 exit 1
             fi
             
@@ -235,7 +292,8 @@ EOF
     echo "   - All files under .secret/"
 }
 
-show_status() {
+show_status()
+{
     echo "Git Configuration:"
     git config --get-regexp 'filter\.git-age' 2>/dev/null || echo "  (not configured)"
     
