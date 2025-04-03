@@ -25,7 +25,9 @@ jobs:
           echo "MSYSTEM: $MSYSTEM"
           echo "uname -s: $(uname -s)"
           echo "uname -o: $(uname -o)"
-          . ./test/git-age-test.sh
+
+          cd ..
+          . $GITHUB_WORKSPACE/test/git-age-test.sh
           install_age
-          test_encryption "./src" ${{ matrix.encryption_type }}
-          test_decryption "./src" ${{ matrix.encryption_type }}
+          test_encryption "$GITHUB_WORKSPACE/src" ${{ matrix.encryption_type }}
+          test_decryption "$GITHUB_WORKSPACE/src" ${{ matrix.encryption_type }}
