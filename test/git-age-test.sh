@@ -77,18 +77,28 @@ install_age()
     esac
 }
 
-test_encryption()
+install_git_age()
 {
     local binpath=${1-.}
-    local encryption_type=${2:-symmetric}
-    local repo_name=${3:-test-repo}
-    local secret_config=${4:-config.secret}
-    local secret_content=${5:-"test secret config"}
+    echo "Installing git-age in binpath ($binpath)..."
+    mkdir -p "$binpath"
+    local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    cp "$script_path/../src/git-age.sh" "$binpath/git-age.sh"
+    chmod +x "$binpath/git-age.sh"
+    echo "git-age.sh installed successfully (faked)."
+}
+
+test_encryption()
+{
+    local encryption_type=${1:-symmetric}
+    local repo_name=${2:-test-repo}
+    local secret_config=${3:-config.secret}
+    local secret_content=${4:-"test secret config"}
 
     echo "Testing $encryption_type encryption..."
     init_git_repo "$repo_name"
     cd "$repo_name" || exit 1
-    init_git_age "$binpath" "$encryption_type"
+    init_git_age "$encryption_type"
     add_secret_config "$secret_config" "$secret_content"
     verify_if_encrypted "$encryption_type" "$secret_config"
     cd ..
@@ -97,17 +107,16 @@ test_encryption()
 
 test_decryption()
 {
-    local binpath=${1-.}
-    local encryption_type=${2:-symmetric}
-    local test_repo=${3:-test-repo}
-    local secret_config=${4:-config.secret}
-    local secret_content=${5:-"test secret config"}
-    local clone_repo=${6:-test-repo-clone}
+    local encryption_type=${1:-symmetric}
+    local repo_name=${2:-test-repo}
+    local secret_config=${3:-config.secret}
+    local secret_content=${4:-"test secret config"}
+    local clone_repo_name=${5:-test-repo-clone}
 
     echo "Testing $encryption_type decryption..."
-    clone_git_repo "$test_repo" "$clone_repo"
-    cd $clone_repo || exit 1
-    init_git_age "$binpath" "$encryption_type"
+    clone_git_repo "$repo_name" "$clone_repo_name"
+    cd $clone_repo_name || exit 1
+    init_git_age "$encryption_type"
     verify_if_encrypted "$encryption_type" "$secret_config"
     git checkout -- .
     verify_if_decrypted "$secret_config" "$secret_content"
@@ -184,11 +193,7 @@ add_secret_config()
 
 init_git_age()
 {
-    local binpath=$1
-    cp "$binpath/git-age.sh" .
-    chmod +x git-age.sh
-    
-    local encryption_type=${2:-symmetric}
+    local encryption_type=${1:-symmetric}
     case "$encryption_type" in
         symmetric)
             echo "testpassword" | ./git-age.sh init "$encryption_type"

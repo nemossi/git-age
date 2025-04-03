@@ -29,5 +29,7 @@ jobs:
           cd ..
           . $GITHUB_WORKSPACE/test/git-age-test.sh
           install_age
-          test_encryption "$GITHUB_WORKSPACE/src" ${{ matrix.encryption_type }}
-          test_decryption "$GITHUB_WORKSPACE/src" ${{ matrix.encryption_type }}
+          install_git_age
+          test_encryption ${{ matrix.encryption_type }}
+          test_decryption ${{ matrix.encryption_type }}
+
