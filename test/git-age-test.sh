@@ -81,12 +81,12 @@ test_encryption()
 {
     local binpath=${1-.}
     local encryption_type=${2:-symmetric}
-    local test_repo=${3:-test-repo}
+    local repo_name=${3:-test-repo}
     local secret_config=${4:-config.secret}
     local secret_content=${5:-"test secret config"}
 
     echo "Testing $encryption_type encryption..."
-    init_git_repo "$test_repo"
+    init_git_repo "$repo_name"
     cd "$repo_name" || exit 1
     init_git_age "$binpath" "$encryption_type"
     add_secret_config "$secret_config" "$secret_content"
