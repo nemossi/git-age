@@ -190,7 +190,8 @@ add_secret_config()
         ls -la
         exit 1
     }
-    echo "File $filename is created."
+    sync && sleep 1
+    echo "File $filename is created. File size = $(wc -c < "$filename") bytes."
 
     # Force the filter to apply
     GIT_TRACE=1 git add --renormalize "$filename" 2>&1 | grep -E 'trace:|filter:' || { 
