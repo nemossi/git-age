@@ -264,8 +264,9 @@ init()
             ;;
     esac
 
-    git config filter.git-age.clean "git-age clean"
-    git config filter.git-age.smudge "git-age smudge"
+    local script_binpath="$(realpath -s "$0")"
+    git config filter.git-age.clean "\"$script_binpath\" clean"
+    git config filter.git-age.smudge "\"$script_binpath\" smudge"
     git config filter.git-age.required true
     
     local git_attrs=".gitattributes"

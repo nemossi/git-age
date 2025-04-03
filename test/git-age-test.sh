@@ -74,30 +74,18 @@ install_age()
 install_git_age()
 {
     local binpath=${1-.}
-    local mock=${2-false}
 
     echo "Installing git-age in binpath ($binpath)..."
 
     # Copy the script to the binpath
     mkdir -p "$binpath"
-    if [[ "$mock" == "true" ]]; then
-        cat <<EOF > "$binpath/git-age"
-case "${1:-}" in
-    clean)      echo "mock git-age clean..." ;;
-    smudge)     echo "mock git-age smudge..." ;;
-    init)
-        git config filter.git-age.clean "git-age clean"
-        git config filter.git-age.smudge "git-age smudge"
-        git config filter.git-age.required true
-        echo "*.secret filter=git-age diff=git-age" >> .gitattributes
-        ;;
-esac
-EOF
-   else
     local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-        cp "$script_path/../src/git-age.sh" "$binpath/git-age"
-    fi
-    chmod +x "$binpath/git-age"
+    cp "$script_path/../src/git-age.sh" "$binpath/git-age"
+
+    chmod +x "$binpath/git-age" || {
+    echo "ERROR: Failed to set executable permissions" >&2
+    exit 1
+}
 
     # Add binpath to PATH if not already present
     if [[ ":$PATH:" != *":$binpath:"* ]]; then
