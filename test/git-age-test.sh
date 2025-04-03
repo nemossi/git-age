@@ -87,8 +87,8 @@ test_encryption()
 
     echo "Testing $encryption_type encryption..."
     init_git_repo "$test_repo"
+    cd "$repo_name" || exit 1
     init_git_age "$binpath" "$encryption_type"
-    cd $test_repo || exit 1
     add_secret_config "$secret_config" "$secret_content"
     verify_if_encrypted "$encryption_type" "$secret_config"
     cd ..
@@ -132,6 +132,7 @@ init_git_user()
     local name=${2-Git Age Test}
     git config user.email "$email"
     git config user.name "$name"
+    echo "Git user initialized with email: $email and name: $name"
 }
 
 clone_git_repo()
