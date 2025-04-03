@@ -185,15 +185,15 @@ add_secret_config()
     # Create the file with the secret content
     echo "$content" > "$filename"
     sleep 1
-
-    # First check if file exists in filesystem
     if [ ! -f "$filename" ]; then
         echo "ERROR: File $filename not created" >&2
         exit 1
     fi
+    echo "File $filename is created."
 
-    # Stage the file with forced filter application
-    git add "$filename" || { 
+    # Force the filter to apply
+    git checkout -- "$filename" || true
+    git add --renormalize "$filename" || { 
         echo "ERROR: Failed to stage file $filename" >&2
         echo "Debug - file contents:"
         cat "$filename"
@@ -201,17 +201,16 @@ add_secret_config()
         git status -v
         exit 1
     }
-
-    # Verify file is properly tracked
     if ! git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
         echo "ERROR: File $filename not tracked in git index" >&2
         echo "Debug - git index status:"
         git ls-files --stage
         exit 1
     fi
+    echo "File $filename is staged."
 
+    # Commit the file
     git commit -m "Add encrypted config"
-
     echo "Post-commit file status:"
     git ls-files --eol "$filename"
 }
