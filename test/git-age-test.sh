@@ -122,6 +122,7 @@ init_git_repo()
     cd "$repo_name" || exit 1
     git init
     init_git_user
+    git config core.autocrlf false
     cd ..
 }
 
@@ -203,7 +204,7 @@ init_git_age()
     esac
 
     # Commit .gitattributes to activate filters if required
-    if ! git diff --quiet -- .gitattributes; then
+    if ! git ls-files --error-unmatch .gitattributes >/dev/null 2>&1; then
         git add .gitattributes
         git commit -m "Initialize git-age filters"
         echo "git-age filters in .gitattributes file was committed."
