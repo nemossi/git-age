@@ -107,7 +107,7 @@ EOF
         echo "$binpath is already in PATH."
     fi
 
-    echo "git-age.sh installed successfully (faked)."
+    echo "git-age.sh installed successfully (mock=$mock)."
 }
 
 test_encryption()
