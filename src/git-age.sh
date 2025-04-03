@@ -7,14 +7,16 @@ VERSION="0.1.2"
 temp_file=""
 
 # Cleanup function
-cleanup() {
+cleanup()
+{
     if [[ -n "${temp_file:-}" && -f "$temp_file" ]]; then
         rm -f "$temp_file" >/dev/null 2>&1
     fi
 }
 trap cleanup EXIT
 
-show_help() {
+show_help()
+{
     cat <<EOF
 git-age v${VERSION} - Git transparent encryption tool
 

@@ -85,6 +85,12 @@ install_git_age()
 case "${1:-}" in
     clean)      echo "mock git-age clean..." ;;
     smudge)     echo "mock git-age smudge..." ;;
+    init)
+        git config filter.git-age.clean "git-age clean"
+        git config filter.git-age.smudge "git-age smudge"
+        git config filter.git-age.required true
+        echo "*.secret filter=git-age diff=git-age" >> .gitattributes
+        ;;
 esac
 EOF
    else
