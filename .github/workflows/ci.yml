@@ -12,7 +12,7 @@ jobs:
       matrix:
         #os: [windows-latest, ubuntu-latest, macos-latest]
         #encryption_type: [symmetric, asymmetric]
-        os: [windows-latest]
+        os: [ubuntu-latest]
         encryption_type: [symmetric]
     runs-on: ${{ matrix.os }}
     steps:
