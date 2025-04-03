@@ -1,11 +1,5 @@
 #!/bin/bash
 
-cleanup_test_env()
-{
-    rm -rf test-repo test-repo-clone
-}
-cleanup_test_env
-
 # Detect OS type
 detect_os()
 {
@@ -81,10 +75,21 @@ install_git_age()
 {
     local binpath=${1-.}
     echo "Installing git-age in binpath ($binpath)..."
+
+    # Copy the script to the binpath
     mkdir -p "$binpath"
     local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     cp "$script_path/../src/git-age.sh" "$binpath/git-age.sh"
     chmod +x "$binpath/git-age.sh"
+
+    # Add binpath to PATH if not already present
+    if [[ ":$PATH:" != *":$binpath:"* ]]; then
+        export PATH="$binpath:$PATH"
+        echo "Added $binpath to PATH."
+    else
+        echo "$binpath is already in PATH."
+    fi
+    
     echo "git-age.sh installed successfully (faked)."
 }
 
@@ -196,10 +201,10 @@ init_git_age()
     local encryption_type=${1:-symmetric}
     case "$encryption_type" in
         symmetric)
-            echo "testpassword" | ./git-age.sh init "$encryption_type"
+            echo "testpassword" | git-age init "$encryption_type"
             ;;
         asymmetric)
-            ./git-age.sh init "$encryption_type"
+            git-age init "$encryption_type"
             export AGE_PUBKEY=$(git config age.publickey)
             export AGE_KEYFILE=$(git config age.keyfile)
             ;;
