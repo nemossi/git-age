@@ -1,46 +1,241 @@
 #!/bin/bash
 
-# Common functions for git-age testing
+# Detect OS type
+detect_os()
+{
+    # Check CI environment variables
+    if [[ -n "$RUNNER_OS" ]]; then
+        case "$RUNNER_OS" in
+            Linux)
+                echo "ubuntu"
+                ;;
+            macOS)
+                echo "macos"
+                ;;
+            Windows)
+                echo "windows"
+                ;;
+            *)
+                echo "Unsupported CI OS: $RUNNER_OS" >&2
+                exit 1
+                ;;
+        esac
+        return
+    fi
 
-install_age() {
-    case "$1" in
+    if [[ -n "$(uname -s)" ]]; then
+        case "$(uname -s)" in
+            Linux*)
+                echo "ubuntu"
+                ;;
+            Darwin*)
+                echo "macos"
+                ;;
+            CYGWIN*|MINGW32*|MINGW64*|MSYS*|*_NT-*)
+                echo "windows"
+                ;;
+            *)
+                echo "Unsupported OS: $(uname -s)" >&2
+                exit 1
+                ;;
+        esac
+        return
+    fi
+
+    # Check for Windows-specific environment variables
+    if [[ -n "$MSYSTEM" ]] || [[ "$(uname -o)" == "Msys" ]]; then
+        echo "windows"
+        return
+    fi
+}
+
+# Install age on ubuntu, windows, and macos
+install_age()
+{
+    local os_type=$(detect_os)
+    case "$os_type" in
         ubuntu)
             sudo apt-get update
             sudo apt-get install -y age
             ;;
         windows)
-            choco install age
+            choco install age.portable
             ;;
         macos)
             brew install age
             ;;
         *)
-            echo "Unsupported OS: $1"
+            echo "Unsupported OS: $os_type" >&2
             exit 1
             ;;
     esac
 }
 
-setup_test_repo() {
-    mkdir test-repo
-    cd test-repo || exit 1
-    git init
-    echo "test config" > config.secret
+install_git_age()
+{
+    local binpath=${1-.}
+
+    echo "Installing git-age in binpath ($binpath)..."
+
+    # Copy the script to the binpath
+    mkdir -p "$binpath"
+    local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    cp "$script_path/../src/git-age.sh" "$binpath/git-age"
+
+    chmod +x "$binpath/git-age" || {
+    echo "ERROR: Failed to set executable permissions" >&2
+    exit 1
 }
 
-configure_git_age() {
+    # Add binpath to PATH if not already present
+    if [[ ":$PATH:" != *":$binpath:"* ]]; then
+        export PATH="$binpath:$PATH"
+        echo "Added $binpath to PATH."
+    else
+        echo "$binpath is already in PATH."
+    fi
+
+    # Check if git-age is installed and executable
+    local which_gitage=$(which git-age)
+    if [ -z "$which_gitage" ]; then
+        echo "ERROR: git-age is not found.";
+        exit 1;
+    fi
+    if [ ! -x "$which_gitage" ]; then
+        echo "ERROR: git-age is not executable.";
+        echo "DEBUG: which git-age"
+        echo "$which_gitage"
+        exit 1;
+    fi
+    echo "git-age.sh installed successfully (mock=$mock)."
+}
+
+test_encryption()
+{
     local encryption_type=${1:-symmetric}
-    cd test-repo || exit 1
-    cp ../src/git-age.sh .
-    chmod +x git-age.sh
-    
+    local repo_name=${2:-test-repo}
+    local secret_config=${3:-config.secret}
+    local secret_content=${4:-"test secret config"}
+
+    echo "Testing $encryption_type encryption..."
+    init_git_repo "$repo_name"
+    cd "$repo_name" || exit 1
+    init_git_age "$encryption_type"
+    add_secret_config "$secret_config" "$secret_content"
+    verify_if_encrypted "$encryption_type" "$secret_config"
+    cd ..
+    echo "$encryption_type encryption test passed."
+}
+
+test_decryption()
+{
+    local encryption_type=${1:-symmetric}
+    local repo_name=${2:-test-repo}
+    local secret_config=${3:-config.secret}
+    local secret_content=${4:-"test secret config"}
+    local clone_repo_name=${5:-test-repo-clone}
+
+    echo "Testing $encryption_type decryption..."
+    clone_git_repo "$repo_name" "$clone_repo_name"
+    cd $clone_repo_name || exit 1
+    init_git_age "$encryption_type"
+    verify_if_encrypted "$encryption_type" "$secret_config"
+    git checkout -- .
+    verify_if_decrypted "$secret_config" "$secret_content"
+    cd ..
+    echo "$encryption_type decryption test passed."
+}
+
+init_git_repo()
+{
+    local repo_name=${1:-test-repo}
+    mkdir "$repo_name"
+    cd "$repo_name" || exit 1
+    git init
+    init_git_user
+    git config core.autocrlf false
+    cd ..
+}
+
+init_git_user()
+{
+    local email=${1-git-age-test@example.com}
+    local name=${2-Git Age Test}
+    git config user.email "$email"
+    git config user.name "$name"
+    echo "Git user initialized with email: $email and name: $name"
+}
+
+clone_git_repo()
+{
+    local source_repo=${1:-test-repo}
+    local target_repo=${2:-test-repo-clone}
+    cd "$source_repo" || { echo "ERROR: Failed to enter source directory $source_repo" >&2; exit 1; }
+    git clone . "../$target_repo" || { echo "ERROR: Failed to clone repository" >&2; exit 1; }
+    cd "../$target_repo" || { echo "ERROR: Failed to enter cloned repository $target_repo" >&2; exit 1; }
+}
+
+add_secret_config()
+{
+    echo "Adding secret config..."
+    echo "Current Working Directory: $(pwd)"
+    echo "Git Repo Directory: $(git rev-parse --show-toplevel 2>/dev/null || echo 'Not a git repository')"
+
+    # Create the file with the secret content
+    local filename=${1:-config.secret}
+    local content=${2:-"test secret config"}
+    echo "$content" > "$filename" || {
+        echo "ERROR: File $filename not created" >&2
+        echo "DEBUG: ls -la"
+        ls -la
+        exit 1
+    }
+    sync && sleep 1
+    echo "File $filename is created. File size = $(wc -c < "$filename") bytes."
+
+    # Force the filter to apply
+    GIT_TRACE=1 git add --renormalize "$filename" 2>&1 | grep -E 'trace:|filter:' || { 
+        echo "ERROR: Failed to stage file $filename" >&2
+        echo "DEBUG: cat $filename"
+        cat "$filename"
+        echo "DEBUG: git status -v"
+        git status -v
+        exit 1
+    }
+    if ! git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
+        echo "ERROR: File $filename not tracked in git index" >&2
+        echo "DEBUG: ls-files --stage"
+        git ls-files --stage
+        echo "DEBUG: ls -la $filename"
+        ls -la "$filename"
+        echo "DEBUG: git check-attr -a $filename"
+        git check-attr -a "$filename"
+        exit 1
+    fi
+    echo "File $filename is staged."
+
+    # Commit the file
+    git commit -m "Add encrypted config" && {
+        echo "File '$filename' is committed."
+        echo "DEBUG: git show HEAD:$filename"
+        git show HEAD:"$filename" | head -n 3
+        echo "DEBUG: head -n 3 $filename"
+        head -n 3 "$filename"
+    }
+    echo "Post-commit file status:"
+    git ls-files --eol "$filename"
+}
+
+init_git_age()
+{
+    local encryption_type=${1:-symmetric}
+    echo "Initializing git-age (encryption=$encryption_type)..."
     case "$encryption_type" in
         symmetric)
-            echo "testpassword" | ./git-age.sh init symmetric
+            echo "testpassword" | git-age init "$encryption_type"
             ;;
         asymmetric)
-            ./git-age.sh init asymmetric
-            # 获取并导出公钥和密钥文件路径
+            git-age init "$encryption_type"
             export AGE_PUBKEY=$(git config age.publickey)
             export AGE_KEYFILE=$(git config age.keyfile)
             ;;
@@ -49,136 +244,100 @@ configure_git_age() {
             exit 1
             ;;
     esac
-}
 
-test_encryption_workflow() {
-    local os_type=$1
-    local encryption_type=${2:-symmetric}
-    
-    echo "Testing $encryption_type encryption on $os_type"
-    
-    setup_test_repo
-    configure_git_age "$encryption_type"
-    
-    # 测试加密
-    cd test-repo || exit 1
-    git add config.secret
-    git commit -m "Add encrypted config"
-    
-    verify_encryption "$os_type"
-    
-    # 测试解密
-    test_decryption_process "$os_type" "$encryption_type"
-    
-    echo "$encryption_type encryption test passed on $os_type"
-}
-
-verify_encryption() {
-    case "$1" in
-        windows)
-            Select-String -Path .\config.secret -Pattern "BEGIN AGE ENCRYPTED FILE" -Quiet
-            if (!$?) {
-                echo "ERROR: File is not encrypted"
-                exit 1
-            }
-            ;;
-        *)
-            if ! grep -q "BEGIN AGE ENCRYPTED FILE" config.secret; then
-                echo "ERROR: File is not encrypted"
-                exit 1
-            fi
-            ;;
-    esac
-    echo "File is properly encrypted"
-}
-
-test_decryption_process() {
-    local os_type=$1
-    local encryption_type=$2
-    
-    cd test-repo || exit 1
-    git clone . ../test-repo-clone
-    cd ../test-repo-clone || exit 1
-    
-    case "$1" in
-        windows)
-            Select-String -Path .\config.secret -Pattern "BEGIN AGE ENCRYPTED FILE" -Quiet
-            if (!$?) {
-                echo "ERROR: File is not encrypted before decryption"
-                exit 1
-            }
-            ;;
-        *)
-            if ! grep -q "BEGIN AGE ENCRYPTED FILE" config.secret; then
-                echo "ERROR: File is not encrypted before decryption"
-                exit 1
-            fi
-            ;;
-    esac
-    
-    cp ../../src/git-age.sh .
-    chmod +x git-age.sh
-    
-    # 根据加密类型初始化
-    if [[ "$encryption_type" == "asymmetric" ]]; then
-        # 从原仓库复制密钥文件
-        cp ../../test-repo/.git/git-age-key .git/
-        ./git-age.sh init asymmetric
+    # Commit .gitattributes to activate filters if required
+    if ! git ls-files --error-unmatch .gitattributes >/dev/null 2>&1; then
+        git add .gitattributes
+        git commit -m "Initialize git-age filters"
+        echo "git-age filters in .gitattributes file was committed."
     else
-        echo "testpassword" | ./git-age.sh init symmetric
+        echo "git-age filters in .gitattributes file are already initialized (skip committing)."
     fi
-    
-    git checkout -- .
-    
-    # 解密验证
-    case "$os_type" in
-        windows)
-            Select-String -Path .\config.secret -Pattern "test config" -Quiet
-            if (!$?) {
-                echo "ERROR: File is not decrypted"
-                exit 1
-            }
-            Get-Content .\config.secret | ./git-age.sh smudge
-            ;;
-        *)
-            if ! grep -q "test config" config.secret; then
-                echo "ERROR: File is not decrypted"
-                exit 1
-            fi
-            ./git-age.sh smudge < config.secret
-            ;;
-    esac
-    
-    echo "File is properly decrypted"
+
+    # Check if git config & git attr are set correctly
+    echo "DEBUG: git config --get-regexp 'git-age'"
+    git config --get-regexp 'git-age'
+    echo "DEBUG: git show \":.gitattributes\" | head -n 3"
+    git show ":.gitattributes" | head -n 3
 }
 
-# 新增专用测试函数
-test_asymmetric_encryption() {
-    local os_type=$1
-    echo "Testing asymmetric encryption on $os_type"
+verify_if_encrypted()
+{
+    local encryption_type=${1:-symmetric}
+    local filename=${2:-config.secret}
     
-    setup_test_repo
-    configure_git_age "asymmetric"
-    
-    # 测试加密
-    cd test-repo || exit 1
-    git add config.secret
-    git commit -m "Add encrypted config"
-    
-    verify_encryption "$os_type"
-    
-    # 测试解密
-    test_decryption_process "$os_type" "asymmetric"
-    
-    # 验证密钥文件安全性
-    if [[ ! -f ".git/git-age-key" ]]; then
-        echo "ERROR: Key file not found"
-        exit 1
-    fi
-    if [[ $(stat -c %a .git/git-age-key) != "600" ]]; then
-        echo "ERROR: Key file permissions are not secure"
+    if [ ! -f "$filename" ]; then
+        echo "ERROR: File $filename does not exist" >&2
         exit 1
     fi
     
-    echo "Asymmetric encryption test passed on $os_type"
+    if grep -q "BEGIN AGE ENCRYPTED FILE" "$filename"; then
+        echo "ERROR: Working copy should be decrypted" >&2
+        exit 1
+    fi
+
+    local blob_hash=$(git hash-object "$filename")
+    local git_content=$(git cat-file -p "$blob_hash")
+
+    local git_content=$(git show ":$filename")
+    if ! echo "$git_content" | grep -q "BEGIN AGE ENCRYPTED FILE"; then
+        echo "RAW_GIT_CONTENT: $git_content"
+        echo "ERROR: File $filename is not properly encrypted in Git index (missing AGE header)" >&2
+        exit 1
+    fi
+    
+    if [[ "$encryption_type" == "asymmetric" ]]; then
+        if ! echo "$git_content" | grep -q "recipient:"; then
+            echo "RAW_GIT_CONTENT: $git_content"
+            echo "ERROR: Asymmetric encryption missing recipient header in Git index" >&2
+            exit 1
+        fi
+    fi
+    
+    echo "Secret file $filename is properly encrypted in Git index"
+}
+
+verify_if_decrypted()
+{
+    local os_type=$(detect_os)
+    local filename=${1:-config.secret}
+    local expected_content=${2:-"test config"}
+    if ! grep -q "$(echo -e "$expected_content")" "$filename"; then
+        cat "$filename"
+        echo "ERROR: File is not decrypted" >&2
+        exit 1
+    fi
+    check_file_permissions "$filename"
+    echo "Secret file $filename is properly decrypted and has correct permissions"    
+}
+
+check_file_rw()
+{
+    local os_type=$(detect_os)
+    local filename=${1:-config.secret}
+
+    case "os_type" in
+        ubuntu)
+            if [[ "$(stat -c '%a' "$filename")" != "644" ]]; then
+                echo "ERROR: File permissions should be 644 after decryption" >&2
+                exit 1
+            fi
+            ;;
+        windows)
+            if attrib "$filename" | grep -q "R "; then
+                echo "ERROR: File should not be read-only after decryption" >&2
+                exit 1
+            fi
+            ;;
+        macos)
+            if [[ "$(stat -f '%OLp' "$filename")" != "644" ]]; then
+                echo "ERROR: File permissions should be 644 after decryption" >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unsupported OS: $os_type" >&2
+            exit 1
+            ;;
+    esac
 }

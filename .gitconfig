@@ -1,0 +1,15 @@
+[alias]
+
+# Reinitialize a local dev branch with the latest commit (in remote main branch)
+# Usage: git ready <branch-name>
+ready = "!f() { git checkout main && git pull && git branch --list | grep -q \"$1\" && git branch -d \"$1\"; git switch -c \"$1\"; }; f"
+
+# Publish a new remote branch with version tag and optional release note
+# USAGE: git publish <semver> [<release-note>]
+# NOTE:
+#   - The <semver> must be prefixed with 'v'
+#   - The <semver> could contains a pre-release suffix, e.g. v1.0.0-pre
+#       - Package without version suffix will be published as a stable & official release on nuget.org
+#       - Package with "-pre" suffix will be published as a pre-release on nuget.org
+#       - Package with other suffix, for example "-dev", "-alpha", "-beta", "-rc", ... will be published as a dev internal release on Github Packages.
+publish = '!f() { git checkout main && git pull && if [ -z $2 ]; then git tag $1; else git tag -a $1 -m $2; fi && git push origin $1; }; f'
