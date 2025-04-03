@@ -192,18 +192,17 @@ add_secret_config()
     echo "File $filename is created."
 
     # Force the filter to apply
-    git checkout -- "$filename" || true
     git add --renormalize "$filename" || { 
         echo "ERROR: Failed to stage file $filename" >&2
-        echo "Debug - file contents:"
+        echo "DEBUG: cat $filename"
         cat "$filename"
-        echo "Git status:"
+        echo "DEBUG: git status -v"
         git status -v
         exit 1
     }
     if ! git ls-files --error-unmatch "$filename" >/dev/null 2>&1; then
         echo "ERROR: File $filename not tracked in git index" >&2
-        echo "Debug - git index status:"
+        echo "DEBUG: ls-files --stage"
         git ls-files --stage
         exit 1
     fi
