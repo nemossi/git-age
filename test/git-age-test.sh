@@ -1,5 +1,11 @@
 #!/bin/bash
 
+cleanup_test_env()
+{
+    rm -rf test-repo test-repo-clone
+}
+cleanup_test_env
+
 # Detect OS type
 detect_os()
 {
@@ -152,7 +158,7 @@ add_secret_config()
     fi
 
     # Stage the file with forced filter application
-    git add --renormalize "$filename" || { 
+    git add "$filename" || { 
         echo "ERROR: Failed to stage file $filename" >&2
         echo "Debug - file contents:"
         cat "$filename"
