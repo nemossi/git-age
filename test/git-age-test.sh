@@ -178,21 +178,22 @@ clone_git_repo()
 add_secret_config()
 {
     echo "Adding secret config..."
-
-    local filename=${1:-config.secret}
-    local content=${2:-"test secret config"}
+    echo "Current Working Directory: $(pwd)"
+    echo "Git Repo Directory: $(git rev-parse --show-toplevel 2>/dev/null || echo 'Not a git repository')"
 
     # Create the file with the secret content
-    echo "$content" > "$filename"
-    sleep 1
-    if [ ! -f "$filename" ]; then
+    local filename=${1:-config.secret}
+    local content=${2:-"test secret config"}
+    echo "$content" > "$filename" || {
         echo "ERROR: File $filename not created" >&2
+        echo "DEBUG: ls -la"
+        ls -la
         exit 1
-    fi
+    }
     echo "File $filename is created."
 
     # Force the filter to apply
-    git add --renormalize "$filename" || { 
+    GIT_TRACE=1 git add --renormalize "$filename" 2>&1 | grep -E 'trace:|filter:' || { 
         echo "ERROR: Failed to stage file $filename" >&2
         echo "DEBUG: cat $filename"
         cat "$filename"
@@ -204,12 +205,22 @@ add_secret_config()
         echo "ERROR: File $filename not tracked in git index" >&2
         echo "DEBUG: ls-files --stage"
         git ls-files --stage
+        echo "DEBUG: ls -la $filename"
+        ls -la "$filename"
+        echo "DEBUG: git check-attr -a $filename"
+        git check-attr -a "$filename"
         exit 1
     fi
     echo "File $filename is staged."
 
     # Commit the file
-    git commit -m "Add encrypted config"
+    git commit -m "Add encrypted config" && {
+        echo "File '$filename' is committed."
+        echo "DEBUG: git show HEAD:$filename"
+        git show HEAD:"$filename" | head -n 3
+        echo "DEBUG: head -n 3 $filename"
+        head -n 3 "$filename"
+    }
     echo "Post-commit file status:"
     git ls-files --eol "$filename"
 }
