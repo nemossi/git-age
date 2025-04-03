@@ -107,6 +107,15 @@ EOF
         echo "$binpath is already in PATH."
     fi
 
+    # Check if git-age is in PATH
+    local which_gitage=$(which git-age)
+    [ -x "$which_gitage" ] || {
+        echo "ERROR: git-age is not executable.";
+        echo "DEBUG: which git-age"
+        echo "$which_gitage"
+        exit 1;
+    }
+    
     echo "git-age.sh installed successfully (mock=$mock)."
 }
 
