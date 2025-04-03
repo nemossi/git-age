@@ -74,12 +74,23 @@ install_age()
 install_git_age()
 {
     local binpath=${1-.}
+    local mock=${2-true}
+
     echo "Installing git-age in binpath ($binpath)..."
 
     # Copy the script to the binpath
     mkdir -p "$binpath"
+    if [[ "$mock" == "true" ]]; then
+        echo <<EOF
+case "${1:-}" in
+    clean)      echo "mock git-age clean..." ;;
+    smudge)     echo "mock git-age smudge..." ;;
+esac
+EOF > "$binpath/git-age"
+    else
     local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cp "$script_path/../src/git-age.sh" "$binpath/git-age"
+        cp "$script_path/../src/git-age.sh" "$binpath/git-age"
+    fi
     chmod +x "$binpath/git-age"
 
     # Add binpath to PATH if not already present
@@ -160,6 +171,8 @@ clone_git_repo()
 
 add_secret_config()
 {
+    echo "Adding secret config..."
+
     local filename=${1:-config.secret}
     local content=${2:-"test secret config"}
 
@@ -192,6 +205,7 @@ add_secret_config()
     fi
 
     git commit -m "Add encrypted config"
+
     echo "Post-commit file status:"
     git ls-files --eol "$filename"
 }
