@@ -74,7 +74,7 @@ install_age()
 install_git_age()
 {
     local binpath=${1-.}
-    local mock=${2-true}
+    local mock=${2-false}
 
     echo "Installing git-age in binpath ($binpath)..."
 
@@ -219,6 +219,7 @@ add_secret_config()
 init_git_age()
 {
     local encryption_type=${1:-symmetric}
+    echo "Initializing git-age (encryption=$encryption_type)..."
     case "$encryption_type" in
         symmetric)
             echo "testpassword" | git-age init "$encryption_type"
