@@ -79,7 +79,7 @@ install_git_age()
     # Copy the script to the binpath
     mkdir -p "$binpath"
     local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    cp "$script_path/../src/git-age.sh" "$binpath/git-age.sh"
+    cp "$script_path/../src/git-age.sh" "$binpath/git-age"
     chmod +x "$binpath/git-age.sh"
 
     # Add binpath to PATH if not already present
@@ -89,7 +89,7 @@ install_git_age()
     else
         echo "$binpath is already in PATH."
     fi
-    
+
     echo "git-age.sh installed successfully (faked)."
 }
 
