@@ -81,13 +81,13 @@ install_git_age()
     # Copy the script to the binpath
     mkdir -p "$binpath"
     if [[ "$mock" == "true" ]]; then
-        echo <<EOF
+        cat <<EOF > "$binpath/git-age"
 case "${1:-}" in
     clean)      echo "mock git-age clean..." ;;
     smudge)     echo "mock git-age smudge..." ;;
 esac
-EOF > "$binpath/git-age"
-    else
+EOF
+   else
     local script_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
         cp "$script_path/../src/git-age.sh" "$binpath/git-age"
     fi
