@@ -109,11 +109,11 @@ EOF
 
     # Check if git-age is installed and executable
     local which_gitage=$(which git-age)
-    if [ -z "$git_age_path" ]; then
+    if [ -z "$which_gitage" ]; then
         echo "ERROR: git-age is not found.";
         exit 1;
     fi
-    if [ ! -x "$git_age_path" ]; then
+    if [ ! -x "$which_gitage" ]; then
         echo "ERROR: git-age is not executable.";
         echo "DEBUG: which git-age"
         echo "$which_gitage"
