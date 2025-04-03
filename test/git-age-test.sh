@@ -107,15 +107,18 @@ EOF
         echo "$binpath is already in PATH."
     fi
 
-    # Check if git-age is in PATH
+    # Check if git-age is installed and executable
     local which_gitage=$(which git-age)
-    [ -x "$which_gitage" ] || {
+    if [ -z "$git_age_path" ]; then
+        echo "ERROR: git-age is not found.";
+        exit 1;
+    fi
+    if [ ! -x "$git_age_path" ]; then
         echo "ERROR: git-age is not executable.";
         echo "DEBUG: which git-age"
         echo "$which_gitage"
         exit 1;
-    }
-    
+    fi
     echo "git-age.sh installed successfully (mock=$mock)."
 }
 
@@ -262,6 +265,12 @@ init_git_age()
     else
         echo "git-age filters in .gitattributes file are already initialized (skip committing)."
     fi
+
+    # Check if git config & git attr are set correctly
+    echo "DEBUG: git config --get-regexp 'git-age'"
+    git config --get-regexp 'git-age'
+    echo "DEBUG: git show \":.gitattributes\" | head -n 3"
+    git show ":.gitattributes" | head -n 3
 }
 
 verify_if_encrypted()
